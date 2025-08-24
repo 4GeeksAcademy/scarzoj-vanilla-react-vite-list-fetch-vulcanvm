@@ -5,72 +5,69 @@ export const App = () => {
   const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
   const [showDelete, setShowDelete] = useState(null);
-  
-  useEffect( () => {
-    tastkGet()
-  }, [])
 
-  const tastkGet = () => {
+  useEffect(() => {
     fetch('https://playground.4geeks.com/todo/users/salvalistfetch', {
-    method: "GET",
-  })
-    .then(data => {
-      setTasks(data); 
-  })
-    .catch(error => {
-        console.log(error);
-    });
-  };
-  const putTask = () => {
-
-   const task = {
-    "label": tasks(),
-    "is_done": false
-   };
-      fetch('https://playground.4geeks.com/todo/users/salvalistfetch', {
-        method: "POST",
-        body: JSON.stringify(task),
-        headers: {
-          "Content-Type": "application/json"
-        }
+      method: "GET"
     })
     .then(resp => resp.json())
-    .then(() => tastkGet())
-    .catch(error => {
-      console.log(error);
-    });
-  };
+    .then(data => setTasks(data.todos || []))
+    .catch(console.log);
+  }, []);
 
   const taskItem = tasks.map(task => (
     <ListGroup.Item
-      className="d-flex justify-content-between border-0"
+      className="d-flex justify-content-between align-items-center"
       key={task.id}
       onMouseOver={() => setShowDelete(task.id)} 
       onMouseLeave={() => setShowDelete(null)}   
     >
-      <p className="text-truncate">
-        {task.text}
-      </p>
+      {task.label || task.text} 
       {showDelete === task.id && (<CloseButton onClick={() => deleteTask(task.id)} />)}
     </ListGroup.Item>
   ));
 
-
-  const addTask = (e) => 
-    e.key === "Enter"  && input.trim() !== "" && (setTasks([...tasks, { id: crypto.randomUUID(), text: input }]), setInput(""));
+  const addTask = (e) => {
+    if (e.key === "Enter" && input.trim() !== "") {
+      const newTask = { label: input.trim(), is_done: false };
+      fetch('https://playground.4geeks.com/todo/todos/salvalistfetch', {
+        method: "POST",
+        body: JSON.stringify(newTask),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(resp => resp.json())
+      .then(() => {
+        fetch('https://playground.4geeks.com/todo/users/salvalistfetch', { method: "GET" })
+          .then(resp => resp.json())
+          .then(data => setTasks(data.todos || []))
+      })
+      .catch(console.log);
+      setInput("");
+    }
+  };
 
   const deleteTask = (id) => {
-    setTasks(tasks.filter(t => t.id !== id));
+    fetch(`https://playground.4geeks.com/todo/todos/salvalistfetch/${id}`, {
+      method: "DELETE"
+    })
+    .then(resp => resp.json())
+    .then(() => {
+      fetch('https://playground.4geeks.com/todo/users/salvalistfetch', { method: "GET" })
+        .then(resp => resp.json())
+        .then(data => setTasks(data.todos || []))
+    })
+    .catch(console.log);
   };
 
   return (
     <>
     <Container className="justify-content-md-center text-center">
       <Row className="justify-content-md-center">
-        <Col>
+        <Col xs lg="2">
           <h1>todos:</h1>
             <FormControl
-              className="mb-2 shadow-none border-0 border-bottom rounded-0"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={addTask}
@@ -78,7 +75,7 @@ export const App = () => {
         </Col>
       </Row>
       <Row className="justify-content-md-center">
-        <Col>
+        <Col xs lg="2">
           <ListGroup>
             {taskItem}
           </ListGroup>
@@ -87,5 +84,4 @@ export const App = () => {
     </Container>
     </>
   );
-  
 };
